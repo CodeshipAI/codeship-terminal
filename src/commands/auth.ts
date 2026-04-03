@@ -27,63 +27,64 @@ allowed-tools: Bash(ship *)
 
 # Codeship CLI Skill
 
-You have access to the \`ship\` CLI to manage Codeship projects and resources.
+You have access to the \\\`ship\\\` CLI to manage Codeship projects and resources.
 
 ## Authentication
 
 Check auth status first:
-\`\`\`bash
+\\\`\\\`\\\`bash
 ship auth status
-\`\`\`
+\\\`\\\`\\\`
 
-If not authenticated, instruct the user to run \`ship auth login\`.
+If not authenticated, instruct the user to run \\\`ship auth login\\\` directly in their terminal (it opens a browser).
 
 ## Commands Reference
 
 ### Projects
-\`\`\`bash
-ship project list                    # List all projects
-ship project create                  # Interactive project creation
-ship project import                  # Import from GitHub repo
-ship project view <project-id>       # View project details
-ship project delete <project-id>     # Delete a project
-\`\`\`
+\\\`\\\`\\\`bash
+ship project list                                          # List all projects
+ship project list --json                                   # List as JSON
+ship project create --name "My App" --repo "https://github.com/org/repo" --description "desc"
+ship project import --repo "https://github.com/org/repo"   # Import from GitHub
+ship project view <project-id>                             # View project details
+ship project view <project-id> --json                      # View as JSON
+ship project delete <project-id> --yes                     # Delete (skip confirmation)
+\\\`\\\`\\\`
 
 ### Epics
-\`\`\`bash
-ship epic list <project-id>                      # List epics
-ship epic create <project-id>                     # Create an epic
-ship epic view <project-id> <epic-id>             # View epic details + stories
-ship epic start <project-id> <epic-id>            # Start an epic session
-\`\`\`
+\\\`\\\`\\\`bash
+ship epic list <project-id>                                        # List epics
+ship epic create <project-id> --title "Epic title" --description "desc"
+ship epic view <epic-id>                                           # View epic details
+ship epic status <epic-id>                                         # Compact status
+\\\`\\\`\\\`
 
 ### Sessions
-\`\`\`bash
+\\\`\\\`\\\`bash
 ship sessions list <epic-id>          # List sessions for an epic
 ship sessions view <session-id>       # View session details
-\`\`\`
+\\\`\\\`\\\`
 
 ### MCP Connectors
-\`\`\`bash
+\\\`\\\`\\\`bash
 ship mcp list <project-id>                           # List connectors
-ship mcp add <project-id>                            # Add connector (interactive)
-ship mcp add <project-id> --template                 # Add from template
 ship mcp remove <project-id> <connector-id>          # Remove connector
 ship mcp toggle <project-id> <connector-id>          # Enable/disable connector
-\`\`\`
+\\\`\\\`\\\`
 
 ### Configuration
-\`\`\`bash
+\\\`\\\`\\\`bash
 ship config set api-url <url>         # Set API base URL
 ship config get api-url               # Show current API URL
-\`\`\`
+\\\`\\\`\\\`
 
 ## Guidelines
 
-- Always check \`ship auth status\` before running other commands
-- For interactive commands (create, import, add), inform the user that prompts will appear in the terminal
-- Display command output directly to the user
-- If a command fails with an auth error, tell the user to run \`ship auth login\`
+- Always check \\\`ship auth status\\\` before running other commands
+- ALWAYS use flags (--name, --repo, --title, etc.) instead of interactive prompts — interactive prompts don't work in this environment
+- Use \\\`--json\\\` flag when you need to parse output programmatically
+- Use \\\`--yes\\\` flag to skip confirmation prompts (e.g. delete)
+- If a command fails with an auth error, tell the user to run \\\`ship auth login\\\` directly in their terminal
 `;
 
   try {

@@ -38,12 +38,17 @@ export const projectCommand = new Command('project')
 projectCommand
   .command('list')
   .description('List all projects')
-  .action(async () => {
+  .option('--json', 'Output as JSON')
+  .action(async (options: { json?: boolean }) => {
     if (!(await requireAuth())) return;
     try {
       const projects = await getApiClient().listProjects();
       if (projects.length === 0) {
         console.log(chalk.yellow('No projects found.'));
+        return;
+      }
+      if (options.json) {
+        console.log(JSON.stringify(projects, null, 2));
         return;
       }
       const table = new Table({
@@ -55,7 +60,7 @@ projectCommand
         ],
       });
       for (const p of projects) {
-        table.push([p.id, p.name, p.repoUrl, formatDate(p.createdAt)]);
+        table.push([p.id, p.name, p.repoUrl ?? '', formatDate(p.createdAt)]);
       }
       console.log(table.toString());
     } catch (err) {
@@ -66,33 +71,44 @@ projectCommand
 projectCommand
   .command('create')
   .description('Create a new project')
-  .action(async () => {
+  .option('--name <name>', 'Project name')
+  .option('--repo <url>', 'GitHub repository URL')
+  .option('--description <desc>', 'Project description')
+  .action(async (options: { name?: string; repo?: string; description?: string }) => {
     if (!(await requireAuth())) return;
     try {
-      const answers = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'name',
-          message: 'Project name:',
-          validate: (v: string) => v.trim().length > 0 || 'Name is required',
-        },
-        {
-          type: 'input',
-          name: 'repoUrl',
-          message: 'GitHub repository URL:',
-          validate: (v: string) => v.trim().length > 0 || 'Repository URL is required',
-        },
-        {
-          type: 'input',
-          name: 'description',
-          message: 'Description (optional):',
-        },
-      ]);
+      let { name, repo, description } = options;
+
+      // If flags not provided, fall back to interactive prompts
+      if (!name || !repo) {
+        const answers = await inquirer.prompt([
+          ...(!name ? [{
+            type: 'input' as const,
+            name: 'name',
+            message: 'Project name:',
+            validate: (v: string) => v.trim().length > 0 || 'Name is required',
+          }] : []),
+          ...(!repo ? [{
+            type: 'input' as const,
+            name: 'repoUrl',
+            message: 'GitHub repository URL:',
+            validate: (v: string) => v.trim().length > 0 || 'Repository URL is required',
+          }] : []),
+          ...(!description ? [{
+            type: 'input' as const,
+            name: 'description',
+            message: 'Description (optional):',
+          }] : []),
+        ]);
+        name = name ?? answers.name;
+        repo = repo ?? answers.repoUrl;
+        description = description ?? answers.description;
+      }
 
       const project = await getApiClient().createProject({
-        name: answers.name.trim(),
-        repoUrl: answers.repoUrl.trim(),
-        description: answers.description.trim() || undefined,
+        name: name!.trim(),
+        repoUrl: repo!.trim(),
+        description: description?.trim() || undefined,
       });
 
       console.log(chalk.green(`\nProject created successfully!`));
@@ -107,19 +123,23 @@ projectCommand
 projectCommand
   .command('import')
   .description('Import a project from a GitHub repository')
-  .action(async () => {
+  .option('--repo <url>', 'GitHub repository URL')
+  .action(async (options: { repo?: string }) => {
     if (!(await requireAuth())) return;
     try {
-      const { repoUrl } = await inquirer.prompt([
-        {
+      let repoUrl = options.repo;
+
+      if (!repoUrl) {
+        const answers = await inquirer.prompt([{
           type: 'input',
           name: 'repoUrl',
           message: 'GitHub repository URL:',
           validate: (v: string) => v.trim().length > 0 || 'Repository URL is required',
-        },
-      ]);
+        }]);
+        repoUrl = answers.repoUrl;
+      }
 
-      const project = await getApiClient().importProject(repoUrl.trim());
+      const project = await getApiClient().importProject(repoUrl!.trim());
 
       console.log(chalk.green(`\nProject imported successfully!`));
       console.log(`  ID:   ${project.id}`);
@@ -134,10 +154,16 @@ projectCommand
   .command('view')
   .description('View project details')
   .argument('<id>', 'Project ID')
-  .action(async (id: string) => {
+  .option('--json', 'Output as JSON')
+  .action(async (id: string, options: { json?: boolean }) => {
     if (!(await requireAuth())) return;
     try {
       const project = await getApiClient().getProject(id);
+
+      if (options.json) {
+        console.log(JSON.stringify(project, null, 2));
+        return;
+      }
 
       console.log(chalk.bold(`\nProject: ${project.name}`));
       console.log(`  ID:          ${project.id}`);
@@ -156,21 +182,24 @@ projectCommand
   .command('delete')
   .description('Delete a project')
   .argument('<id>', 'Project ID')
-  .action(async (id: string) => {
+  .option('--yes', 'Skip confirmation prompt')
+  .action(async (id: string, options: { yes?: boolean }) => {
     if (!(await requireAuth())) return;
     try {
-      const { confirmed } = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'confirmed',
-          message: `Are you sure you want to delete project ${chalk.red(id)}? This cannot be undone.`,
-          default: false,
-        },
-      ]);
+      if (!options.yes) {
+        const { confirmed } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'confirmed',
+            message: `Are you sure you want to delete project ${chalk.red(id)}? This cannot be undone.`,
+            default: false,
+          },
+        ]);
 
-      if (!confirmed) {
-        console.log(chalk.yellow('Deletion cancelled.'));
-        return;
+        if (!confirmed) {
+          console.log(chalk.yellow('Deletion cancelled.'));
+          return;
+        }
       }
 
       await getApiClient().deleteProject(id);
