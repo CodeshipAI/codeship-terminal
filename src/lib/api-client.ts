@@ -1,34 +1,225 @@
 import { loadConfig } from './config.js';
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly statusText: string,
+    public readonly body: string,
+  ) {
+    super(`API error ${status}: ${body || statusText}`);
+    this.name = 'ApiError';
+  }
+}
+
+export class AuthenticationError extends ApiError {
+  constructor(statusText: string, body: string) {
+    super(401, statusText, body);
+    this.name = 'AuthenticationError';
+  }
+}
+
 export interface ApiRequestOptions {
   method?: string;
   body?: unknown;
   headers?: Record<string, string>;
 }
 
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const config = await loadConfig();
-  const url = `${config.apiUrl}${path}`;
+// --- API response types ---
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+export interface Project {
+  id: string;
+  name: string;
+  repoUrl: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-  if (config.token) {
-    headers['Authorization'] = `Bearer ${config.token}`;
+export interface Epic {
+  id: string;
+  projectId: string;
+  title: string;
+  description?: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface McpConnector {
+  id: string;
+  projectId: string;
+  name: string;
+  type: string;
+  config: Record<string, unknown>;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Session {
+  id: string;
+  epicId: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- API Client ---
+
+export class ApiClient {
+  private baseUrl: string | undefined;
+
+  constructor(baseUrl?: string) {
+    this.baseUrl = baseUrl;
   }
 
-  const response = await fetch(url, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(`API error ${response.status}: ${text || response.statusText}`);
+  private async resolveBaseUrl(): Promise<string> {
+    if (this.baseUrl) return this.baseUrl;
+    const config = await loadConfig();
+    return config.apiUrl;
   }
 
-  return response.json() as Promise<T>;
+  private async getToken(): Promise<string | undefined> {
+    const config = await loadConfig();
+    return config.token;
+  }
+
+  async request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+    const baseUrl = await this.resolveBaseUrl();
+    const token = await this.getToken();
+    const url = `${baseUrl}${path}`;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+
+    if (response.status === 401) {
+      const body = await response.text().catch(() => '');
+      throw new AuthenticationError(
+        response.statusText,
+        body || 'Unauthorized. Run `ship auth login` to authenticate.',
+      );
+    }
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new ApiError(response.status, response.statusText, body);
+    }
+
+    if (response.status === 204) {
+      return undefined as T;
+    }
+
+    return response.json() as Promise<T>;
+  }
+
+  // --- Projects ---
+
+  listProjects(): Promise<Project[]> {
+    return this.request<Project[]>('/v1/projects');
+  }
+
+  getProject(id: string): Promise<Project> {
+    return this.request<Project>(`/v1/projects/${encodeURIComponent(id)}`);
+  }
+
+  createProject(data: { name: string; repoUrl: string; description?: string }): Promise<Project> {
+    return this.request<Project>('/v1/projects', { method: 'POST', body: data });
+  }
+
+  importProject(repoUrl: string): Promise<Project> {
+    return this.request<Project>('/v1/projects/import', { method: 'POST', body: { repoUrl } });
+  }
+
+  deleteProject(id: string): Promise<void> {
+    return this.request<void>(`/v1/projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  }
+
+  // --- Epics ---
+
+  listEpics(projectId: string): Promise<Epic[]> {
+    return this.request<Epic[]>(`/v1/projects/${encodeURIComponent(projectId)}/epics`);
+  }
+
+  getEpic(epicId: string): Promise<Epic> {
+    return this.request<Epic>(`/v1/epics/${encodeURIComponent(epicId)}`);
+  }
+
+  createEpic(projectId: string, data: { title: string; description?: string }): Promise<Epic> {
+    return this.request<Epic>(`/v1/projects/${encodeURIComponent(projectId)}/epics`, {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  // --- Sessions ---
+
+  listSessions(epicId: string): Promise<Session[]> {
+    return this.request<Session[]>(`/v1/epics/${encodeURIComponent(epicId)}/sessions`);
+  }
+
+  getSession(sessionId: string): Promise<Session> {
+    return this.request<Session>(`/v1/sessions/${encodeURIComponent(sessionId)}`);
+  }
+
+  // --- MCP Connectors ---
+
+  listConnectors(projectId: string): Promise<McpConnector[]> {
+    return this.request<McpConnector[]>(
+      `/v1/projects/${encodeURIComponent(projectId)}/connectors`,
+    );
+  }
+
+  addConnector(
+    projectId: string,
+    data: { name: string; type: string; config: Record<string, unknown> },
+  ): Promise<McpConnector> {
+    return this.request<McpConnector>(
+      `/v1/projects/${encodeURIComponent(projectId)}/connectors`,
+      { method: 'POST', body: data },
+    );
+  }
+
+  updateConnector(
+    connectorId: string,
+    data: Partial<{ name: string; type: string; config: Record<string, unknown>; enabled: boolean }>,
+  ): Promise<McpConnector> {
+    return this.request<McpConnector>(
+      `/v1/connectors/${encodeURIComponent(connectorId)}`,
+      { method: 'PATCH', body: data },
+    );
+  }
+
+  removeConnector(connectorId: string): Promise<void> {
+    return this.request<void>(`/v1/connectors/${encodeURIComponent(connectorId)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  toggleConnector(connectorId: string, enabled: boolean): Promise<McpConnector> {
+    return this.request<McpConnector>(
+      `/v1/connectors/${encodeURIComponent(connectorId)}`,
+      { method: 'PATCH', body: { enabled } },
+    );
+  }
+}
+
+let defaultClient: ApiClient | undefined;
+
+export function getApiClient(): ApiClient {
+  if (!defaultClient) {
+    defaultClient = new ApiClient();
+  }
+  return defaultClient;
 }
