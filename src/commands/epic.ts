@@ -20,10 +20,12 @@ epicCommand
         console.log(chalk.dim('No epics found for this project.'));
         return;
       }
-      console.log(chalk.bold(`Epics for project ${projectId}:`));
+      console.log(chalk.bold(`Sessions for project ${projectId}:`));
       for (const epic of epics) {
-        const statusColor = epic.status === 'active' ? chalk.green : chalk.dim;
-        console.log(`  ${chalk.cyan(epic.id)}  ${epic.title}  ${statusColor(`[${epic.status}]`)}`);
+        const statusColor = epic.status === 'active' || epic.status === 'running' ? chalk.green : chalk.dim;
+        const title = epic.name ?? epic.title ?? 'Unnamed';
+        const progress = epic.storyProgress ? ` (${epic.storyProgress.completed}/${epic.storyProgress.total} stories)` : '';
+        console.log(`  ${chalk.cyan(epic.id)}  ${title}  ${statusColor(`[${epic.status}]`)}${progress}`);
       }
     } catch (err) {
       spinner.fail('Failed to fetch epics.');
@@ -83,8 +85,8 @@ epicCommand
       const client = getApiClient();
       const epic = await client.getEpic(epicId);
       spinner.stop();
-      const statusColor = epic.status === 'active' ? chalk.green : chalk.dim;
-      console.log(`${chalk.cyan(epic.id)}  ${epic.title}  ${statusColor(epic.status)}`);
+      const statusColor = epic.status === 'active' || epic.status === 'running' ? chalk.green : chalk.dim;
+      console.log(`${chalk.cyan(epic.id)}  ${epic.name ?? epic.title ?? 'Unnamed'}  ${statusColor(epic.status)}`);
     } catch (err) {
       spinner.fail('Failed to fetch epic status.');
       console.error(chalk.red(String(err)));
@@ -94,11 +96,17 @@ epicCommand
 
 function printEpic(epic: Epic): void {
   console.log(`  ${chalk.bold('ID:')}          ${epic.id}`);
-  console.log(`  ${chalk.bold('Title:')}       ${epic.title}`);
+  console.log(`  ${chalk.bold('Name:')}        ${epic.name ?? epic.title ?? 'Unnamed'}`);
   if (epic.description) {
     console.log(`  ${chalk.bold('Description:')} ${epic.description}`);
   }
   console.log(`  ${chalk.bold('Status:')}      ${epic.status}`);
   console.log(`  ${chalk.bold('Project:')}     ${epic.projectId}`);
+  if (epic.storyProgress) {
+    console.log(`  ${chalk.bold('Stories:')}     ${epic.storyProgress.completed}/${epic.storyProgress.total}`);
+  }
+  if (epic.agentCount !== undefined) {
+    console.log(`  ${chalk.bold('Agents:')}      ${epic.agentCount}`);
+  }
   console.log(`  ${chalk.bold('Created:')}     ${epic.createdAt}`);
 }

@@ -38,11 +38,14 @@ export interface Project {
 export interface Epic {
   id: string;
   projectId: string;
-  title: string;
+  name: string;
+  title?: string;
   description?: string;
   status: string;
+  storyProgress?: { total: number; completed: number };
+  agentCount?: number;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface McpConnector {
@@ -149,8 +152,11 @@ export class ApiClient {
 
   // --- Epics ---
 
-  listEpics(projectId: string): Promise<Epic[]> {
-    return this.request<Epic[]>(`/api/projects/${encodeURIComponent(projectId)}/epics`);
+  async listEpics(projectId: string): Promise<Epic[]> {
+    const data = await this.request<{ sessions: Epic[] } | Epic[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions`,
+    );
+    return Array.isArray(data) ? data : data.sessions;
   }
 
   getEpic(epicId: string): Promise<Epic> {
@@ -158,9 +164,9 @@ export class ApiClient {
   }
 
   createEpic(projectId: string, data: { title: string; description?: string }): Promise<Epic> {
-    return this.request<Epic>(`/api/projects/${encodeURIComponent(projectId)}/epics`, {
+    return this.request<Epic>(`/api/projects/${encodeURIComponent(projectId)}/sessions`, {
       method: 'POST',
-      body: data,
+      body: { name: data.title, requirement: data.description },
     });
   }
 
