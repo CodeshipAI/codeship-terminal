@@ -16,11 +16,16 @@
     "lint": "eslint src/",
     "clean": "rm -rf dist"
   },
-  "keywords": ["codeship", "cli", "terminal"],
+  "keywords": [
+    "codeship",
+    "cli",
+    "terminal"
+  ],
   "license": "MIT",
   "dependencies": {
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
+    "open": "^10.2.0",
     "ora": "^8.1.0"
   },
   "devDependencies": {
