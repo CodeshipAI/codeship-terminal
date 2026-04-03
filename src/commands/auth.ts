@@ -12,13 +12,6 @@ async function installClaudeSkill(): Promise<boolean> {
   const skillDir = path.join(os.homedir(), '.claude', 'skills', 'codeship');
   const skillPath = path.join(skillDir, 'SKILL.md');
 
-  try {
-    await fs.access(skillPath);
-    return false; // already installed
-  } catch {
-    // skill doesn't exist yet — install it
-  }
-
   const skillContent = `---
 name: codeship
 description: "Manage Codeship projects, epics, sessions, and MCP connectors via the ship CLI. Use when the user asks about their Codeship projects, wants to create/import projects, manage epics, or configure MCP connectors."
