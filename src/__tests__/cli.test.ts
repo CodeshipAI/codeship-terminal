@@ -67,4 +67,10 @@ describe('ship CLI', () => {
     expect(output).toContain('remove');
     expect(output).toContain('toggle');
   });
+
+  it('shows sessions subcommands', () => {
+    const output = run('sessions', '--help');
+    expect(output).toContain('list');
+    expect(output).toContain('view');
+  });
 });
