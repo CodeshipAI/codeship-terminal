@@ -24,11 +24,14 @@
   "license": "MIT",
   "dependencies": {
     "chalk": "^5.3.0",
+    "cli-table3": "^0.6.5",
     "commander": "^12.1.0",
+    "inquirer": "^13.3.2",
     "open": "^10.2.0",
     "ora": "^8.1.0"
   },
   "devDependencies": {
+    "@types/inquirer": "^9.0.9",
     "@types/node": "^20.14.0",
     "typescript": "^5.5.0",
     "vitest": "^2.0.0"
