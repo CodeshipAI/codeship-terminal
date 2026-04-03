@@ -253,7 +253,7 @@ mcpCommand
         return;
       }
       const client = getApiClient();
-      await client.removeConnector(connectorId);
+      await client.removeConnector(projectId, connectorId);
       console.log('Connector removed.');
     } catch (err) {
       rl.close();
@@ -277,8 +277,7 @@ mcpCommand
         console.error(`Connector "${connectorId}" not found in project "${projectId}".`);
         process.exit(1);
       }
-      const newEnabled = !connector.enabled;
-      const updated = await client.toggleConnector(connectorId, newEnabled);
+      const updated = await client.toggleConnector(projectId, connectorId);
       console.log(
         `Connector "${updated.name}" is now ${updated.enabled ? 'enabled' : 'disabled'}.`,
       );

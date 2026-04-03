@@ -10,7 +10,7 @@ export interface CodeshipConfig {
 const CONFIG_DIR = join(homedir(), '.codeship');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 
-const DEFAULT_API_URL = 'https://api.codeship.ai';
+const DEFAULT_API_URL = 'https://api.codeship.tech';
 
 const ALLOWED_KEYS = ['api-url'] as const;
 export type ConfigKey = (typeof ALLOWED_KEYS)[number];

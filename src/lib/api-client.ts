@@ -126,38 +126,39 @@ export class ApiClient {
 
   // --- Projects ---
 
-  listProjects(): Promise<Project[]> {
-    return this.request<Project[]>('/v1/projects');
+  async listProjects(): Promise<Project[]> {
+    const data = await this.request<{ projects: Project[] } | Project[]>('/api/projects');
+    return Array.isArray(data) ? data : data.projects;
   }
 
   getProject(id: string): Promise<Project> {
-    return this.request<Project>(`/v1/projects/${encodeURIComponent(id)}`);
+    return this.request<Project>(`/api/projects/${encodeURIComponent(id)}`);
   }
 
   createProject(data: { name: string; repoUrl: string; description?: string }): Promise<Project> {
-    return this.request<Project>('/v1/projects', { method: 'POST', body: data });
+    return this.request<Project>('/api/projects', { method: 'POST', body: data });
   }
 
   importProject(repoUrl: string): Promise<Project> {
-    return this.request<Project>('/v1/projects/import', { method: 'POST', body: { repoUrl } });
+    return this.request<Project>('/api/projects/import', { method: 'POST', body: { repoUrl } });
   }
 
   deleteProject(id: string): Promise<void> {
-    return this.request<void>(`/v1/projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return this.request<void>(`/api/projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
   }
 
   // --- Epics ---
 
   listEpics(projectId: string): Promise<Epic[]> {
-    return this.request<Epic[]>(`/v1/projects/${encodeURIComponent(projectId)}/epics`);
+    return this.request<Epic[]>(`/api/projects/${encodeURIComponent(projectId)}/epics`);
   }
 
   getEpic(epicId: string): Promise<Epic> {
-    return this.request<Epic>(`/v1/epics/${encodeURIComponent(epicId)}`);
+    return this.request<Epic>(`/api/epics/${encodeURIComponent(epicId)}`);
   }
 
   createEpic(projectId: string, data: { title: string; description?: string }): Promise<Epic> {
-    return this.request<Epic>(`/v1/projects/${encodeURIComponent(projectId)}/epics`, {
+    return this.request<Epic>(`/api/projects/${encodeURIComponent(projectId)}/epics`, {
       method: 'POST',
       body: data,
     });
@@ -166,18 +167,18 @@ export class ApiClient {
   // --- Sessions ---
 
   listSessions(epicId: string): Promise<Session[]> {
-    return this.request<Session[]>(`/v1/epics/${encodeURIComponent(epicId)}/sessions`);
+    return this.request<Session[]>(`/api/epics/${encodeURIComponent(epicId)}/sessions`);
   }
 
   getSession(sessionId: string): Promise<Session> {
-    return this.request<Session>(`/v1/sessions/${encodeURIComponent(sessionId)}`);
+    return this.request<Session>(`/api/sessions/${encodeURIComponent(sessionId)}`);
   }
 
   // --- MCP Connectors ---
 
   listConnectors(projectId: string): Promise<McpConnector[]> {
     return this.request<McpConnector[]>(
-      `/v1/projects/${encodeURIComponent(projectId)}/connectors`,
+      `/api/projects/${encodeURIComponent(projectId)}/mcp-connectors`,
     );
   }
 
@@ -186,31 +187,33 @@ export class ApiClient {
     data: { name: string; type: string; config: Record<string, unknown> },
   ): Promise<McpConnector> {
     return this.request<McpConnector>(
-      `/v1/projects/${encodeURIComponent(projectId)}/connectors`,
+      `/api/projects/${encodeURIComponent(projectId)}/mcp-connectors`,
       { method: 'POST', body: data },
     );
   }
 
   updateConnector(
+    projectId: string,
     connectorId: string,
     data: Partial<{ name: string; type: string; config: Record<string, unknown>; enabled: boolean }>,
   ): Promise<McpConnector> {
     return this.request<McpConnector>(
-      `/v1/connectors/${encodeURIComponent(connectorId)}`,
-      { method: 'PATCH', body: data },
+      `/api/projects/${encodeURIComponent(projectId)}/mcp-connectors/${encodeURIComponent(connectorId)}`,
+      { method: 'PUT', body: data },
     );
   }
 
-  removeConnector(connectorId: string): Promise<void> {
-    return this.request<void>(`/v1/connectors/${encodeURIComponent(connectorId)}`, {
-      method: 'DELETE',
-    });
+  removeConnector(projectId: string, connectorId: string): Promise<void> {
+    return this.request<void>(
+      `/api/projects/${encodeURIComponent(projectId)}/mcp-connectors/${encodeURIComponent(connectorId)}`,
+      { method: 'DELETE' },
+    );
   }
 
-  toggleConnector(connectorId: string, enabled: boolean): Promise<McpConnector> {
+  toggleConnector(projectId: string, connectorId: string): Promise<McpConnector> {
     return this.request<McpConnector>(
-      `/v1/connectors/${encodeURIComponent(connectorId)}`,
-      { method: 'PATCH', body: { enabled } },
+      `/api/projects/${encodeURIComponent(projectId)}/mcp-connectors/${encodeURIComponent(connectorId)}/toggle`,
+      { method: 'PATCH' },
     );
   }
 }

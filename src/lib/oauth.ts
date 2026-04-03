@@ -1,68 +1,74 @@
-import { randomBytes, createHash } from 'node:crypto';
 import { loadConfig } from './config.js';
 
-export interface PKCEChallenge {
-  codeVerifier: string;
-  codeChallenge: string;
+export interface CliAuthInitResponse {
+  authUrl: string;
   state: string;
 }
 
-export function generatePKCE(): PKCEChallenge {
-  const codeVerifier = randomBytes(32).toString('base64url');
-  const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
-  const state = randomBytes(16).toString('hex');
-
-  return { codeVerifier, codeChallenge, state };
+export interface CliAuthPollResponse {
+  status: 'pending' | 'complete' | 'error';
+  token?: string;
+  user?: {
+    sub: string;
+    email: string;
+    name: string;
+    avatarUrl?: string;
+    provider: string;
+  };
+  error?: string;
 }
 
-export function buildAuthorizationUrl(params: {
-  redirectUri: string;
-  codeChallenge: string;
-  state: string;
-  apiUrl: string;
-}): string {
-  const authUrl = new URL('/oauth/authorize', params.apiUrl);
-  authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('client_id', 'codeship-cli');
-  authUrl.searchParams.set('redirect_uri', params.redirectUri);
-  authUrl.searchParams.set('code_challenge', params.codeChallenge);
-  authUrl.searchParams.set('code_challenge_method', 'S256');
-  authUrl.searchParams.set('state', params.state);
-  authUrl.searchParams.set('scope', 'read write');
-  return authUrl.toString();
-}
-
-export interface TokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in?: number;
-  refresh_token?: string;
-}
-
-export async function exchangeCodeForToken(params: {
-  code: string;
-  codeVerifier: string;
-  redirectUri: string;
-}): Promise<TokenResponse> {
+export async function initiateCliAuth(): Promise<CliAuthInitResponse> {
   const config = await loadConfig();
-  const tokenUrl = new URL('/oauth/token', config.apiUrl);
+  const url = new URL('/api/auth/cli/initiate', config.apiUrl);
 
-  const response = await fetch(tokenUrl.toString(), {
+  const response = await fetch(url.toString(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      grant_type: 'authorization_code',
-      client_id: 'codeship-cli',
-      code: params.code,
-      code_verifier: params.codeVerifier,
-      redirect_uri: params.redirectUri,
-    }),
   });
 
   if (!response.ok) {
     const text = await response.text().catch(() => '');
-    throw new Error(`Token exchange failed (${response.status}): ${text || response.statusText}`);
+    throw new Error(`Failed to initiate auth (${response.status}): ${text || response.statusText}`);
   }
 
-  return response.json() as Promise<TokenResponse>;
+  return response.json() as Promise<CliAuthInitResponse>;
+}
+
+export async function pollForToken(state: string): Promise<CliAuthPollResponse> {
+  const config = await loadConfig();
+  const url = new URL(`/api/auth/cli/poll/${state}`, config.apiUrl);
+
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Poll failed (${response.status}): ${text || response.statusText}`);
+  }
+
+  return response.json() as Promise<CliAuthPollResponse>;
+}
+
+const POLL_INTERVAL_MS = 2000;
+const POLL_TIMEOUT_MS = 120_000;
+
+export async function waitForAuth(state: string): Promise<CliAuthPollResponse> {
+  const start = Date.now();
+
+  while (Date.now() - start < POLL_TIMEOUT_MS) {
+    const result = await pollForToken(state);
+
+    if (result.status === 'complete') {
+      return result;
+    }
+
+    if (result.status === 'error') {
+      throw new Error(`Authentication failed: ${result.error || 'unknown error'}`);
+    }
+
+    // status === 'pending', wait and retry
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+  }
+
+  throw new Error('Authentication timed out after 2 minutes.');
 }
