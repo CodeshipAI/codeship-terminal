@@ -1,6 +1,9 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
+import { readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { getApiClient, type Epic } from '../lib/api-client.js';
 
 export const epicCommand = new Command('epic')
@@ -40,13 +43,54 @@ epicCommand
   .argument('<project-id>', 'Project ID')
   .requiredOption('--title <title>', 'Epic title')
   .option('--description <description>', 'Epic description')
-  .action(async (projectId: string, options: { title: string; description?: string }) => {
+  .option('--claude-credentials <path>', 'Path to Claude credentials JSON file (default: ~/claude-credentials.json)')
+  .option('--no-claude-credentials', 'Skip Claude credential injection')
+  .action(async (projectId: string, options: { title: string; description?: string; claudeCredentials?: string | false }) => {
     const spinner = ora('Creating epic...').start();
     try {
+      let claudeCredentials: string | undefined;
+
+      if (options.claudeCredentials !== false) {
+        const credPath = typeof options.claudeCredentials === 'string'
+          ? options.claudeCredentials
+          : join(homedir(), 'claude-credentials.json');
+        const isDefaultPath = typeof options.claudeCredentials !== 'string';
+        try {
+          const raw = await readFile(credPath, 'utf-8');
+          // Validate it parses as JSON
+          JSON.parse(raw);
+          claudeCredentials = raw.trim();
+          spinner.stop();
+          console.log(chalk.blue(`ℹ  Injecting Claude credentials from ${credPath}`));
+          spinner.start('Creating epic...');
+        } catch (err: unknown) {
+          if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+            // File doesn't exist — silently skip if using default path, error if explicit
+            if (!isDefaultPath) {
+              spinner.fail(`Claude credentials file not found: ${credPath}`);
+              console.error(chalk.red(`File not found: ${credPath}`));
+              process.exitCode = 1;
+              return;
+            }
+          } else if (err instanceof SyntaxError) {
+            spinner.fail('Claude credentials file is malformed JSON.');
+            console.error(chalk.red(`Invalid JSON in credentials file: ${credPath}`));
+            process.exitCode = 1;
+            return;
+          } else {
+            spinner.fail('Failed to read Claude credentials file.');
+            console.error(chalk.red(String(err)));
+            process.exitCode = 1;
+            return;
+          }
+        }
+      }
+
       const client = getApiClient();
       const epic = await client.createEpic(projectId, {
         title: options.title,
         description: options.description,
+        claudeCredentials,
       });
       spinner.succeed(`Epic created: ${chalk.cyan(epic.id)}`);
       printEpic(epic);

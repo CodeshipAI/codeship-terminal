@@ -12,9 +12,26 @@ vi.mock('../lib/api-client.js', () => ({
   }),
 }));
 
+const mockReadFile = vi.fn();
+vi.mock('node:fs/promises', () => ({
+  readFile: (...args: unknown[]) => mockReadFile(...args),
+}));
+
 import { epicCommand } from '../commands/epic.js';
 
+// Reset Commander option state between tests to avoid cross-test pollution
+function resetCommandOptions(cmd: import('commander').Command): void {
+  // @ts-expect-error accessing internal state
+  cmd._optionValues = {};
+  // @ts-expect-error accessing internal state
+  cmd._optionValueSources = {};
+  for (const sub of cmd.commands) {
+    resetCommandOptions(sub);
+  }
+}
+
 async function run(argv: string[]): Promise<void> {
+  resetCommandOptions(epicCommand);
   await epicCommand.parseAsync(argv, { from: 'user' });
 }
 
@@ -27,6 +44,8 @@ const EPIC = {
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };
+
+const CREDS_JSON = JSON.stringify({ credentials: { claudeAiOauth: { token: 'tok' } }, oauthAccount: { id: 'acct-1' } });
 
 describe('epic list', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -81,21 +100,90 @@ describe('epic status', () => {
 });
 
 describe('epic create', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default: credentials file does not exist
+    const notFound = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    mockReadFile.mockRejectedValue(notFound);
+  });
 
-  it('calls createEpic with project id and title', async () => {
+  it('calls createEpic with project id and title (no credentials file)', async () => {
     mockCreateEpic.mockResolvedValue(EPIC);
     await run(['create', 'proj-1', '--title', 'My Epic']);
-    expect(mockCreateEpic).toHaveBeenCalledWith('proj-1', { title: 'My Epic', description: undefined });
+    expect(mockCreateEpic).toHaveBeenCalledWith('proj-1', { title: 'My Epic', description: undefined, claudeCredentials: undefined });
   });
 
   it('passes description when provided', async () => {
     mockCreateEpic.mockResolvedValue(EPIC);
     await run(['create', 'proj-1', '--title', 'My Epic', '--description', 'details']);
-    expect(mockCreateEpic).toHaveBeenCalledWith('proj-1', { title: 'My Epic', description: 'details' });
+    expect(mockCreateEpic).toHaveBeenCalledWith('proj-1', { title: 'My Epic', description: 'details', claudeCredentials: undefined });
   });
 
-  it('sets exitCode on error', async () => {
+  it('injects credentials from default file when it exists', async () => {
+    mockReadFile.mockResolvedValue(CREDS_JSON);
+    mockCreateEpic.mockResolvedValue(EPIC);
+    await run(['create', 'proj-1', '--title', 'My Epic']);
+    expect(mockCreateEpic).toHaveBeenCalledWith('proj-1', {
+      title: 'My Epic',
+      description: undefined,
+      claudeCredentials: CREDS_JSON,
+    });
+  });
+
+  it('injects credentials from explicit --claude-credentials path', async () => {
+    mockReadFile.mockResolvedValue(CREDS_JSON);
+    mockCreateEpic.mockResolvedValue(EPIC);
+    await run(['create', 'proj-1', '--title', 'My Epic', '--claude-credentials', '/tmp/my-creds.json']);
+    expect(mockReadFile).toHaveBeenCalledWith('/tmp/my-creds.json', 'utf-8');
+    expect(mockCreateEpic).toHaveBeenCalledWith('proj-1', {
+      title: 'My Epic',
+      description: undefined,
+      claudeCredentials: CREDS_JSON,
+    });
+  });
+
+  it('shows info message when credentials are injected', async () => {
+    mockReadFile.mockResolvedValue(CREDS_JSON);
+    mockCreateEpic.mockResolvedValue(EPIC);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await run(['create', 'proj-1', '--title', 'My Epic', '--claude-credentials', '/tmp/my-creds.json']);
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('Injecting Claude credentials'));
+    spy.mockRestore();
+  });
+
+  it('skips injection with --no-claude-credentials', async () => {
+    mockCreateEpic.mockResolvedValue(EPIC);
+    await run(['create', 'proj-1', '--title', 'My Epic', '--no-claude-credentials']);
+    expect(mockReadFile).not.toHaveBeenCalled();
+    expect(mockCreateEpic).toHaveBeenCalledWith('proj-1', {
+      title: 'My Epic',
+      description: undefined,
+      claudeCredentials: undefined,
+    });
+  });
+
+  it('sets exitCode and errors on malformed credentials JSON', async () => {
+    mockReadFile.mockResolvedValue('not-valid-json{{{');
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await run(['create', 'proj-1', '--title', 'My Epic', '--claude-credentials', '/tmp/bad.json']);
+    expect(process.exitCode).toBe(1);
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('Invalid JSON'));
+    process.exitCode = 0;
+    spy.mockRestore();
+  });
+
+  it('sets exitCode when explicit credentials file is not found', async () => {
+    const notFound = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    mockReadFile.mockRejectedValue(notFound);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await run(['create', 'proj-1', '--title', 'My Epic', '--claude-credentials', '/tmp/missing.json']);
+    expect(process.exitCode).toBe(1);
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('File not found'));
+    process.exitCode = 0;
+    spy.mockRestore();
+  });
+
+  it('sets exitCode on API error', async () => {
     mockCreateEpic.mockRejectedValue(new Error('server error'));
     await run(['create', 'proj-1', '--title', 'Bad Epic']);
     expect(process.exitCode).toBe(1);
