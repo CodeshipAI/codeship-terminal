@@ -7,10 +7,13 @@ export interface CodeshipConfig {
   token?: string;
 }
 
-const CONFIG_DIR = join(homedir(), '.codeship');
-const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
+function getConfigFile(): string {
+  if (process.env.CODESHIP_CONFIG_FILE) return process.env.CODESHIP_CONFIG_FILE;
+  const configDir = join(homedir(), '.codeship');
+  return join(configDir, 'config.json');
+}
 
-const DEFAULT_API_URL = 'https://api.codeship.tech';
+const DEFAULT_API_URL = 'https://api.codeship.ai';
 
 const ALLOWED_KEYS = ['api-url'] as const;
 export type ConfigKey = (typeof ALLOWED_KEYS)[number];
@@ -24,8 +27,9 @@ function resolveApiUrl(fileApiUrl?: string): string {
 }
 
 export async function loadConfig(): Promise<CodeshipConfig> {
+  const configFile = getConfigFile();
   try {
-    const data = await readFile(CONFIG_FILE, 'utf-8');
+    const data = await readFile(configFile, 'utf-8');
     const parsed = JSON.parse(data) as Partial<CodeshipConfig>;
     return {
       apiUrl: resolveApiUrl(parsed.apiUrl),
@@ -37,8 +41,10 @@ export async function loadConfig(): Promise<CodeshipConfig> {
 }
 
 export async function saveConfig(config: CodeshipConfig): Promise<void> {
-  await mkdir(CONFIG_DIR, { recursive: true });
-  await writeFile(CONFIG_FILE, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+  const configFile = getConfigFile();
+  const configDir = join(configFile, '..');
+  await mkdir(configDir, { recursive: true });
+  await writeFile(configFile, JSON.stringify(config, null, 2) + '\n', 'utf-8');
 }
 
 export async function setConfigValue(key: ConfigKey, value: string): Promise<void> {
@@ -64,5 +70,5 @@ export async function resetConfig(): Promise<void> {
 }
 
 export function getConfigPath(): string {
-  return CONFIG_FILE;
+  return getConfigFile();
 }

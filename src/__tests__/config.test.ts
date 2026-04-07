@@ -8,11 +8,13 @@ describe('config', () => {
 
   beforeEach(async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'codeship-test-'));
+    process.env.CODESHIP_CONFIG_FILE = join(tempDir, 'config.json');
   });
 
   afterEach(async () => {
     await rm(tempDir, { recursive: true, force: true });
     delete process.env.CODESHIP_API_URL;
+    delete process.env.CODESHIP_CONFIG_FILE;
   });
 
   it('should have correct default API URL', async () => {
