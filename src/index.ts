@@ -13,6 +13,7 @@ import { escalationCommand } from './commands/escalation.js';
 import { msgCommand } from './commands/msg.js';
 import { agentCommand } from './commands/agent.js';
 import { storyCommand } from './commands/story.js';
+import { localCommand } from './commands/local.js';
 
 const LOGO = `
 ${chalk.bold.hex('#4F8EF7')(`    ██████╗ ██████╗ ██████╗ ███████╗███████╗██╗  ██╗██╗██████╗ `)}
@@ -76,5 +77,6 @@ program.addCommand(escalationCommand);
 program.addCommand(msgCommand);
 program.addCommand(agentCommand);
 program.addCommand(storyCommand);
+program.addCommand(localCommand);
 
 program.parse();
