@@ -8,6 +8,7 @@ import { projectCommand } from './commands/project.js';
 import { epicCommand } from './commands/epic.js';
 import { sessionsCommand } from './commands/sessions.js';
 import { mcpCommand } from './commands/mcp.js';
+import { escalationCommand } from './commands/escalation.js';
 import { msgCommand } from './commands/msg.js';
 
 const LOGO = `
@@ -67,6 +68,7 @@ program.addCommand(projectCommand);
 program.addCommand(epicCommand);
 program.addCommand(sessionsCommand);
 program.addCommand(mcpCommand);
+program.addCommand(escalationCommand);
 program.addCommand(msgCommand);
 
 program.parse();
