@@ -246,7 +246,11 @@ export class ApiClient {
   createEpic(projectId: string, data: { title: string; description?: string }): Promise<Epic> {
     return this.request<Epic>(`/api/projects/${encodeURIComponent(projectId)}/sessions`, {
       method: 'POST',
-      body: { name: data.title, requirement: data.description },
+      body: {
+        name: data.title,
+        requirementTitle: data.title,
+        requirementDescription: data.description || data.title,
+      },
     });
   }
 
@@ -377,10 +381,11 @@ export class ApiClient {
 
   // --- Messaging ---
 
-  listMessages(projectId: string, sessionId: string, agentId?: string): Promise<Message[]> {
+  async listMessages(projectId: string, sessionId: string, agentId?: string): Promise<Message[]> {
     const base = `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`;
     const url = agentId ? `${base}?agentId=${encodeURIComponent(agentId)}` : base;
-    return this.request<Message[]>(url);
+    const data = await this.request<{ messages: Message[] } | Message[]>(url);
+    return Array.isArray(data) ? data : data.messages;
   }
 
   sendMessage(
@@ -390,7 +395,7 @@ export class ApiClient {
   ): Promise<Message> {
     return this.request<Message>(
       `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`,
-      { method: 'POST', body: data },
+      { method: 'POST', body: { body: data.content, toAgent: data.agentId ?? 'all' } },
     );
   }
 
@@ -439,10 +444,11 @@ export class ApiClient {
     };
   }
 
-  getSessionActivity(projectId: string, sessionId: string): Promise<ActivityEntry[]> {
-    return this.request<ActivityEntry[]>(
+  async getSessionActivity(projectId: string, sessionId: string): Promise<ActivityEntry[]> {
+    const data = await this.request<{ activity: ActivityEntry[] } | ActivityEntry[]>(
       `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/activity`,
     );
+    return Array.isArray(data) ? data : data.activity;
   }
 
   getSessionCosts(projectId: string, sessionId: string): Promise<SessionCosts> {

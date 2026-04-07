@@ -71,9 +71,13 @@ sessionsCommand
       }
       console.log(chalk.bold(`Activity for session ${sessionId}:`));
       for (const entry of entries) {
-        const typeColor = activityColor(entry.type);
+        // API may use eventType/message or type/description
+        const raw = entry as unknown as Record<string, string>;
+        const type = raw.eventType ?? raw.type ?? 'unknown';
+        const desc = raw.message ?? raw.description ?? '';
+        const typeColor = activityColor(type);
         console.log(
-          `  ${chalk.dim(entry.timestamp)}  ${typeColor(`[${entry.type}]`)}  ${entry.description}`,
+          `  ${chalk.dim(entry.timestamp)}  ${typeColor(`[${type}]`)}  ${desc}`,
         );
       }
     } catch (err) {
@@ -95,13 +99,25 @@ sessionsCommand
       const costs = await client.getSessionCosts(projectId, sessionId);
       spinner.stop();
       console.log(chalk.bold(`Costs for session ${sessionId}:`));
-      console.log(`  ${chalk.bold('Total cost:')}  ${chalk.cyan('$' + costs.totalCost.toFixed(4))}`);
-      if (costs.breakdown.length > 0) {
+      const raw = costs as unknown as Record<string, unknown>;
+      const totalCost = (raw.totalCost ?? 0) as number;
+      console.log(`  ${chalk.bold('Total cost:')}  ${chalk.cyan('$' + totalCost.toFixed(4))}`);
+      const byAgent = (raw.byAgent ?? raw.breakdown ?? []) as { agentId?: string; cost?: number; name?: string }[];
+      if (byAgent.length > 0) {
         console.log();
         console.log(chalk.bold('  By agent:'));
-        for (const item of costs.breakdown) {
-          console.log(`    ${chalk.dim(item.agentId)}  ${chalk.cyan('$' + item.cost.toFixed(4))}`);
+        for (const item of byAgent) {
+          const label = item.agentId ?? item.name ?? 'unknown';
+          const cost = item.cost ?? 0;
+          console.log(`    ${chalk.dim(label)}  ${chalk.cyan('$' + cost.toFixed(4))}`);
         }
+      }
+      const totalTokens = ((raw.totalInputTokens ?? 0) as number) + ((raw.totalOutputTokens ?? 0) as number);
+      if (totalTokens > 0) {
+        console.log();
+        console.log(`  ${chalk.bold('Input tokens:')}   ${raw.totalInputTokens}`);
+        console.log(`  ${chalk.bold('Output tokens:')}  ${raw.totalOutputTokens}`);
+        console.log(`  ${chalk.bold('Total requests:')} ${raw.totalRequests}`);
       }
     } catch (err) {
       spinner.fail('Failed to fetch costs.');
@@ -159,23 +175,48 @@ function printSession(session: Session): void {
 }
 
 function printSessionDetail(detail: SessionDetail): void {
-  printSession(detail.session);
+  // The API may return either { session, stories, agents, escalations } or a flat poll object
+  const raw = detail as unknown as Record<string, unknown>;
+  if (raw.session && typeof raw.session === 'object') {
+    printSession(raw.session as Session);
+  } else if (raw.status) {
+    console.log(`  ${chalk.bold('Status:')}  ${raw.status}`);
+  }
+
+  const stories = (detail.stories ?? []) as { id: string; status: string; title: string }[];
+  const agents = (detail.agents ?? []) as { id: string; status: string; name: string; role: string }[];
+  const escalations = (detail.escalations ?? []) as { id: string; status: string; title: string }[];
+
+  // Summary if present
+  const summary = raw.summary as Record<string, unknown> | undefined;
+  if (summary) {
+    console.log();
+    console.log(chalk.bold('Summary:'));
+    console.log(`  Total stories:  ${summary.totalStories}`);
+    console.log(`  Active agents:  ${summary.activeAgents}`);
+    const cats = summary.storiesByCategory as Record<string, number> | undefined;
+    if (cats) {
+      const parts = Object.entries(cats).filter(([, v]) => v > 0).map(([k, v]) => `${k}: ${v}`);
+      if (parts.length > 0) console.log(`  Categories:     ${parts.join(', ')}`);
+    }
+  }
+
   console.log();
-  console.log(chalk.bold(`Stories (${detail.stories.length}):`));
-  for (const s of detail.stories) {
-    const statusColor = s.status === 'completed' ? chalk.green : chalk.dim;
+  console.log(chalk.bold(`Stories (${stories.length}):`));
+  for (const s of stories) {
+    const statusColor = s.status === 'completed' || s.status === 'merged' ? chalk.green : chalk.dim;
     console.log(`  ${chalk.cyan(s.id)}  ${statusColor(`[${s.status}]`)}  ${s.title}`);
   }
   console.log();
-  console.log(chalk.bold(`Agents (${detail.agents.length}):`));
-  for (const a of detail.agents) {
+  console.log(chalk.bold(`Agents (${agents.length}):`));
+  for (const a of agents) {
     const statusColor = a.status === 'active' ? chalk.green : chalk.dim;
     console.log(`  ${chalk.cyan(a.id)}  ${statusColor(`[${a.status}]`)}  ${a.name}  ${chalk.dim(a.role)}`);
   }
-  if (detail.escalations.length > 0) {
+  if (escalations.length > 0) {
     console.log();
-    console.log(chalk.bold(`Escalations (${detail.escalations.length}):`));
-    for (const e of detail.escalations) {
+    console.log(chalk.bold(`Escalations (${escalations.length}):`));
+    for (const e of escalations) {
       const statusColor = e.status === 'pending' ? chalk.yellow : chalk.dim;
       console.log(`  ${chalk.cyan(e.id)}  ${statusColor(`[${e.status}]`)}  ${e.title}`);
     }
