@@ -11,6 +11,7 @@ import { mcpCommand } from './commands/mcp.js';
 import { dashboardCommand } from './commands/dashboard.js';
 import { escalationCommand } from './commands/escalation.js';
 import { msgCommand } from './commands/msg.js';
+import { storyCommand } from './commands/story.js';
 
 const LOGO = `
 ${chalk.bold.hex('#4F8EF7')(`    ██████╗ ██████╗ ██████╗ ███████╗███████╗██╗  ██╗██╗██████╗ `)}
@@ -72,5 +73,6 @@ program.addCommand(mcpCommand);
 program.addCommand(dashboardCommand);
 program.addCommand(escalationCommand);
 program.addCommand(msgCommand);
+program.addCommand(storyCommand);
 
 program.parse();
