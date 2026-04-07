@@ -444,6 +444,45 @@ export class ApiClient {
       `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/poll`,
     );
   }
+
+  async pollSessionEtag(
+    projectId: string,
+    sessionId: string,
+    etag?: string,
+  ): Promise<{ data: SessionDetail | null; etag?: string }> {
+    const baseUrl = await this.resolveBaseUrl();
+    const token = await this.getToken();
+    const url = `${baseUrl}/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/poll`;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (etag) headers['If-None-Match'] = etag;
+
+    const response = await fetch(url, { headers });
+
+    if (response.status === 304) {
+      return { data: null, etag };
+    }
+
+    if (response.status === 401) {
+      const body = await response.text().catch(() => '');
+      throw new AuthenticationError(
+        response.statusText,
+        body || 'Unauthorized. Run `ship auth login` to authenticate.',
+      );
+    }
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new ApiError(response.status, response.statusText, body);
+    }
+
+    const newEtag = response.headers.get('ETag') ?? undefined;
+    const data = (await response.json()) as SessionDetail;
+    return { data, etag: newEtag };
+  }
 }
 
 let defaultClient: ApiClient | undefined;
