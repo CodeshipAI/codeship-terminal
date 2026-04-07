@@ -243,14 +243,18 @@ export class ApiClient {
     return this.request<Epic>(`/api/epics/${encodeURIComponent(epicId)}`);
   }
 
-  createEpic(projectId: string, data: { title: string; description?: string }): Promise<Epic> {
+  createEpic(projectId: string, data: { title: string; description?: string; claudeCredentials?: string }): Promise<Epic> {
+    const body: Record<string, unknown> = {
+      name: data.title,
+      requirementTitle: data.title,
+      requirementDescription: data.description || data.title,
+    };
+    if (data.claudeCredentials !== undefined) {
+      body.claudeCredentials = data.claudeCredentials;
+    }
     return this.request<Epic>(`/api/projects/${encodeURIComponent(projectId)}/sessions`, {
       method: 'POST',
-      body: {
-        name: data.title,
-        requirementTitle: data.title,
-        requirementDescription: data.description || data.title,
-      },
+      body,
     });
   }
 
