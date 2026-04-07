@@ -80,4 +80,16 @@ describe('ship CLI', () => {
     expect(output).toContain('view');
     expect(output).toContain('logs');
   });
+
+  it('shows local subcommands', () => {
+    const output = run('local', '--help');
+    expect(output).toContain('start');
+    expect(output).toContain('stop');
+    expect(output).toContain('status');
+  });
+
+  it('shows local in main help', () => {
+    const output = run('--help');
+    expect(output).toContain('local');
+  });
 });
