@@ -67,6 +67,86 @@ export interface Session {
   updatedAt: string;
 }
 
+export interface Story {
+  id: string;
+  sessionId: string;
+  title: string;
+  description?: string;
+  status: string;
+  assignee?: string;
+  complexity?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Agent {
+  id: string;
+  sessionId: string;
+  name: string;
+  role: string;
+  status: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface AgentLog {
+  id: string;
+  agentId: string;
+  level: string;
+  message: string;
+  timestamp: string;
+}
+
+export interface Escalation {
+  id: string;
+  sessionId: string;
+  agentId?: string;
+  title: string;
+  description?: string;
+  status: string;
+  resolution?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface Message {
+  id: string;
+  sessionId: string;
+  agentId?: string;
+  sender: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface DashboardStats {
+  activeSessions: number;
+  totalAgents: number;
+  pendingEscalations: number;
+  storiesCompleted: number;
+  storiesTotal: number;
+}
+
+export interface SessionDetail {
+  session: Session;
+  stories: Story[];
+  agents: Agent[];
+  escalations: Escalation[];
+}
+
+export interface ActivityEntry {
+  id: string;
+  sessionId: string;
+  type: string;
+  description: string;
+  timestamp: string;
+}
+
+export interface SessionCosts {
+  sessionId: string;
+  totalCost: number;
+  breakdown: { agentId: string; cost: number }[];
+}
+
 // --- API Client ---
 
 export class ApiClient {
@@ -220,6 +300,148 @@ export class ApiClient {
     return this.request<McpConnector>(
       `/api/projects/${encodeURIComponent(projectId)}/mcp-connectors/${encodeURIComponent(connectorId)}/toggle`,
       { method: 'PATCH' },
+    );
+  }
+
+  // --- Stories ---
+
+  listStories(projectId: string, sessionId: string): Promise<Story[]> {
+    return this.request<Story[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories`,
+    );
+  }
+
+  createStory(
+    projectId: string,
+    sessionId: string,
+    data: { title: string; description?: string; complexity?: number },
+  ): Promise<Story> {
+    return this.request<Story>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories`,
+      { method: 'POST', body: data },
+    );
+  }
+
+  updateStory(
+    projectId: string,
+    sessionId: string,
+    storyId: string,
+    data: Partial<{ title: string; description: string; complexity: number }>,
+  ): Promise<Story> {
+    return this.request<Story>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}`,
+      { method: 'PUT', body: data },
+    );
+  }
+
+  updateStoryStatus(
+    projectId: string,
+    sessionId: string,
+    storyId: string,
+    status: string,
+  ): Promise<Story> {
+    return this.request<Story>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}/status`,
+      { method: 'PATCH', body: { status } },
+    );
+  }
+
+  deleteStory(projectId: string, sessionId: string, storyId: string): Promise<void> {
+    return this.request<void>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}`,
+      { method: 'DELETE' },
+    );
+  }
+
+  // --- Agents ---
+
+  listAgents(projectId: string, sessionId: string): Promise<Agent[]> {
+    return this.request<Agent[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents`,
+    );
+  }
+
+  getAgent(projectId: string, sessionId: string, agentId: string): Promise<Agent> {
+    return this.request<Agent>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(agentId)}`,
+    );
+  }
+
+  getAgentLogs(projectId: string, sessionId: string, agentId: string): Promise<AgentLog[]> {
+    return this.request<AgentLog[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(agentId)}/logs`,
+    );
+  }
+
+  // --- Messaging ---
+
+  listMessages(projectId: string, sessionId: string, agentId?: string): Promise<Message[]> {
+    const base = `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`;
+    const url = agentId ? `${base}?agentId=${encodeURIComponent(agentId)}` : base;
+    return this.request<Message[]>(url);
+  }
+
+  sendMessage(
+    projectId: string,
+    sessionId: string,
+    data: { content: string; agentId?: string },
+  ): Promise<Message> {
+    return this.request<Message>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`,
+      { method: 'POST', body: data },
+    );
+  }
+
+  getMessage(projectId: string, sessionId: string, messageId: string): Promise<Message> {
+    return this.request<Message>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}`,
+    );
+  }
+
+  // --- Escalations ---
+
+  listEscalations(projectId: string, sessionId: string): Promise<Escalation[]> {
+    return this.request<Escalation[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/escalations`,
+    );
+  }
+
+  resolveEscalation(
+    projectId: string,
+    sessionId: string,
+    escalationId: string,
+    resolution: string,
+  ): Promise<Escalation> {
+    return this.request<Escalation>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/escalations/${encodeURIComponent(escalationId)}/resolve`,
+      { method: 'POST', body: { resolution } },
+    );
+  }
+
+  // --- Dashboard ---
+
+  getDashboardStats(since?: string): Promise<DashboardStats> {
+    const query = since ? `?since=${encodeURIComponent(since)}` : '';
+    return this.request<DashboardStats>(`/api/dashboard/stats${query}`);
+  }
+
+  getSessionActivity(projectId: string, sessionId: string): Promise<ActivityEntry[]> {
+    return this.request<ActivityEntry[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/activity`,
+    );
+  }
+
+  getSessionCosts(projectId: string, sessionId: string): Promise<SessionCosts> {
+    return this.request<SessionCosts>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/costs`,
+    );
+  }
+
+  // --- Session Poll ---
+
+  pollSession(projectId: string, sessionId: string): Promise<SessionDetail> {
+    return this.request<SessionDetail>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/poll`,
     );
   }
 }

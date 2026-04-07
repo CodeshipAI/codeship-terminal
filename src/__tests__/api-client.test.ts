@@ -203,5 +203,181 @@ describe('ApiClient', () => {
         }),
       );
     });
+
+    // --- Stories ---
+
+    it('listStories calls GET /sessions/:sid/stories', async () => {
+      await client.listStories('p1', 's1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/projects/p1/sessions/s1/stories'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    it('createStory calls POST /sessions/:sid/stories', async () => {
+      globalThis.fetch = mockFetchResponse(200, { id: 'st1' });
+      await client.createStory('p1', 's1', { title: 'New Story' });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/projects/p1/sessions/s1/stories'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('updateStory calls PUT /stories/:storyId', async () => {
+      globalThis.fetch = mockFetchResponse(200, { id: 'st1' });
+      await client.updateStory('p1', 's1', 'st1', { title: 'Updated' });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/sessions/s1/stories/st1'),
+        expect.objectContaining({ method: 'PUT' }),
+      );
+    });
+
+    it('updateStoryStatus calls PATCH /stories/:storyId/status', async () => {
+      globalThis.fetch = mockFetchResponse(200, { id: 'st1', status: 'done' });
+      await client.updateStoryStatus('p1', 's1', 'st1', 'done');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/stories/st1/status'),
+        expect.objectContaining({ method: 'PATCH' }),
+      );
+    });
+
+    it('deleteStory calls DELETE /stories/:storyId', async () => {
+      globalThis.fetch = mockFetchResponse(204, undefined);
+      await client.deleteStory('p1', 's1', 'st1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/sessions/s1/stories/st1'),
+        expect.objectContaining({ method: 'DELETE' }),
+      );
+    });
+
+    // --- Agents ---
+
+    it('listAgents calls GET /sessions/:sid/agents', async () => {
+      await client.listAgents('p1', 's1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/sessions/s1/agents'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    it('getAgent calls GET /agents/:agentId', async () => {
+      globalThis.fetch = mockFetchResponse(200, { id: 'a1' });
+      await client.getAgent('p1', 's1', 'a1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/agents/a1'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    it('getAgentLogs calls GET /agents/:agentId/logs', async () => {
+      await client.getAgentLogs('p1', 's1', 'a1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/agents/a1/logs'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    // --- Messaging ---
+
+    it('listMessages calls GET /sessions/:sid/messages', async () => {
+      await client.listMessages('p1', 's1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/sessions/s1/messages'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    it('listMessages with agentId includes query param', async () => {
+      await client.listMessages('p1', 's1', 'a1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/messages?agentId=a1'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    it('sendMessage calls POST /sessions/:sid/messages', async () => {
+      globalThis.fetch = mockFetchResponse(200, { id: 'm1' });
+      await client.sendMessage('p1', 's1', { content: 'hello' });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/sessions/s1/messages'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('getMessage calls GET /messages/:msgId', async () => {
+      globalThis.fetch = mockFetchResponse(200, { id: 'm1' });
+      await client.getMessage('p1', 's1', 'm1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/messages/m1'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    // --- Escalations ---
+
+    it('listEscalations calls GET /sessions/:sid/escalations', async () => {
+      await client.listEscalations('p1', 's1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/sessions/s1/escalations'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    it('resolveEscalation calls POST /escalations/:id/resolve', async () => {
+      globalThis.fetch = mockFetchResponse(200, { id: 'e1', status: 'resolved' });
+      await client.resolveEscalation('p1', 's1', 'e1', 'Fixed it');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/escalations/e1/resolve'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    // --- Dashboard ---
+
+    it('getDashboardStats calls GET /dashboard/stats', async () => {
+      globalThis.fetch = mockFetchResponse(200, { activeSessions: 2 });
+      await client.getDashboardStats();
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/dashboard/stats'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    it('getDashboardStats with since includes query param', async () => {
+      globalThis.fetch = mockFetchResponse(200, { activeSessions: 1 });
+      await client.getDashboardStats('2024-01-01');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/dashboard/stats?since=2024-01-01'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    it('getSessionActivity calls GET /sessions/:sid/activity', async () => {
+      await client.getSessionActivity('p1', 's1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/sessions/s1/activity'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    it('getSessionCosts calls GET /sessions/:sid/costs', async () => {
+      globalThis.fetch = mockFetchResponse(200, { sessionId: 's1', totalCost: 0 });
+      await client.getSessionCosts('p1', 's1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/sessions/s1/costs'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    // --- Session Poll ---
+
+    it('pollSession calls GET /sessions/:sid/poll', async () => {
+      globalThis.fetch = mockFetchResponse(200, { session: {}, stories: [], agents: [], escalations: [] });
+      await client.pollSession('p1', 's1');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/sessions/s1/poll'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
   });
 });
