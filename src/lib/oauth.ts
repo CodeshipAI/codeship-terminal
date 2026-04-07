@@ -1,4 +1,39 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { loadConfig } from './config.js';
+
+export interface PKCEParams {
+  codeVerifier: string;
+  codeChallenge: string;
+  state: string;
+}
+
+function base64urlEncode(buf: Buffer): string {
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+export function generatePKCE(): PKCEParams {
+  const codeVerifier = base64urlEncode(randomBytes(48));
+  const codeChallenge = base64urlEncode(createHash('sha256').update(codeVerifier).digest());
+  const state = base64urlEncode(randomBytes(24));
+  return { codeVerifier, codeChallenge, state };
+}
+
+export function buildAuthorizationUrl(params: {
+  redirectUri: string;
+  codeChallenge: string;
+  state: string;
+  apiUrl: string;
+}): string {
+  const url = new URL('/oauth/authorize', params.apiUrl);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('client_id', 'codeship-cli');
+  url.searchParams.set('redirect_uri', params.redirectUri);
+  url.searchParams.set('code_challenge', params.codeChallenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+  url.searchParams.set('state', params.state);
+  url.searchParams.set('scope', 'read write');
+  return url.toString();
+}
 
 export interface CliAuthInitResponse {
   authUrl: string;
