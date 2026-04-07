@@ -241,7 +241,7 @@ describe('mcp toggle action', () => {
     const toggleCmd = mcpCommand.commands.find((c) => c.name() === 'toggle')!;
     await toggleCmd.parseAsync(['node', 'toggle', 'proj-1', 'c1']);
 
-    expect(mockToggleConnector).toHaveBeenCalledWith('c1', false);
+    expect(mockToggleConnector).toHaveBeenCalledWith('proj-1', 'c1');
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining('disabled'),
     );
@@ -275,7 +275,7 @@ describe('mcp toggle action', () => {
     const toggleCmd = mcpCommand.commands.find((c) => c.name() === 'toggle')!;
     await toggleCmd.parseAsync(['node', 'toggle', 'proj-1', 'c1']);
 
-    expect(mockToggleConnector).toHaveBeenCalledWith('c1', true);
+    expect(mockToggleConnector).toHaveBeenCalledWith('proj-1', 'c1');
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining('enabled'),
     );

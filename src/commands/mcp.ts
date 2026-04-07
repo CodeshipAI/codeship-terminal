@@ -277,7 +277,7 @@ mcpCommand
         console.error(`Connector "${connectorId}" not found in project "${projectId}".`);
         process.exit(1);
       }
-      const updated = await client.toggleConnector(connectorId, !connector.enabled);
+      const updated = await client.toggleConnector(projectId, connectorId);
       console.log(
         `Connector "${updated.name}" is now ${updated.enabled ? 'enabled' : 'disabled'}.`,
       );

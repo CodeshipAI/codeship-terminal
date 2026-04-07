@@ -39,10 +39,10 @@ describe('ApiClient', () => {
     const mockData = [{ id: '1', name: 'Test Project' }];
     globalThis.fetch = mockFetchResponse(200, mockData);
 
-    const result = await client.request('/v1/projects');
+    const result = await client.request('/api/projects');
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://test.api.codeship.ai/v1/projects',
+      'https://test.api.codeship.ai/api/projects',
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({
@@ -59,10 +59,10 @@ describe('ApiClient', () => {
     const mockResponse = { id: '2', ...body };
     globalThis.fetch = mockFetchResponse(200, mockResponse);
 
-    const result = await client.request('/v1/projects', { method: 'POST', body });
+    const result = await client.request('/api/projects', { method: 'POST', body });
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://test.api.codeship.ai/v1/projects',
+      'https://test.api.codeship.ai/api/projects',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify(body),
@@ -74,19 +74,19 @@ describe('ApiClient', () => {
   it('throws AuthenticationError on 401', async () => {
     globalThis.fetch = mockFetchResponse(401, 'Unauthorized', 'Unauthorized');
 
-    await expect(client.request('/v1/projects')).rejects.toThrow(AuthenticationError);
+    await expect(client.request('/api/projects')).rejects.toThrow(AuthenticationError);
   });
 
   it('AuthenticationError message mentions ship auth login', async () => {
     globalThis.fetch = mockFetchResponse(401, '', 'Unauthorized');
 
-    await expect(client.request('/v1/projects')).rejects.toThrow(/ship auth login/);
+    await expect(client.request('/api/projects')).rejects.toThrow(/ship auth login/);
   });
 
   it('throws ApiError on other error status codes', async () => {
     globalThis.fetch = mockFetchResponse(500, 'Internal Server Error', 'Internal Server Error');
 
-    await expect(client.request('/v1/projects')).rejects.toThrow(ApiError);
+    await expect(client.request('/api/projects')).rejects.toThrow(ApiError);
   });
 
   it('handles 204 No Content responses', async () => {
@@ -98,7 +98,7 @@ describe('ApiClient', () => {
       text: () => Promise.resolve(''),
     });
 
-    const result = await client.request('/v1/projects/123', { method: 'DELETE' });
+    const result = await client.request('/api/projects/123', { method: 'DELETE' });
     expect(result).toBeUndefined();
   });
 
@@ -106,10 +106,10 @@ describe('ApiClient', () => {
     const customClient = new ApiClient('https://custom.api.example.com');
     globalThis.fetch = mockFetchResponse(200, []);
 
-    await customClient.request('/v1/projects');
+    await customClient.request('/api/projects');
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://custom.api.example.com/v1/projects',
+      'https://custom.api.example.com/api/projects',
       expect.anything(),
     );
   });
@@ -118,10 +118,10 @@ describe('ApiClient', () => {
     const defaultClient = new ApiClient();
     globalThis.fetch = mockFetchResponse(200, []);
 
-    await defaultClient.request('/v1/projects');
+    await defaultClient.request('/api/projects');
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://test.api.codeship.ai/v1/projects',
+      'https://test.api.codeship.ai/api/projects',
       expect.anything(),
     );
   });
@@ -130,7 +130,7 @@ describe('ApiClient', () => {
     mockLoadConfig.mockResolvedValue({ apiUrl: 'https://test.api.codeship.ai' });
     globalThis.fetch = mockFetchResponse(200, []);
 
-    await client.request('/v1/projects');
+    await client.request('/api/projects');
 
     const callHeaders = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].headers;
     expect(callHeaders).not.toHaveProperty('Authorization');
@@ -141,65 +141,64 @@ describe('ApiClient', () => {
       globalThis.fetch = mockFetchResponse(200, []);
     });
 
-    it('listProjects calls GET /v1/projects', async () => {
+    it('listProjects calls GET /api/projects', async () => {
       await client.listProjects();
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/v1/projects'),
+        expect.stringContaining('/api/projects'),
         expect.objectContaining({ method: 'GET' }),
       );
     });
 
-    it('getProject calls GET /v1/projects/:id', async () => {
+    it('getProject calls GET /api/projects/:id', async () => {
       globalThis.fetch = mockFetchResponse(200, { id: '123' });
       await client.getProject('123');
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/v1/projects/123'),
+        expect.stringContaining('/api/projects/123'),
         expect.objectContaining({ method: 'GET' }),
       );
     });
 
-    it('createProject calls POST /v1/projects', async () => {
+    it('createProject calls POST /api/projects', async () => {
       globalThis.fetch = mockFetchResponse(200, { id: '1' });
       await client.createProject({ name: 'Test', repoUrl: 'https://github.com/test/repo' });
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/v1/projects'),
+        expect.stringContaining('/api/projects'),
         expect.objectContaining({ method: 'POST' }),
       );
     });
 
-    it('deleteProject calls DELETE /v1/projects/:id', async () => {
+    it('deleteProject calls DELETE /api/projects/:id', async () => {
       globalThis.fetch = mockFetchResponse(204, undefined);
       await client.deleteProject('123');
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/v1/projects/123'),
+        expect.stringContaining('/api/projects/123'),
         expect.objectContaining({ method: 'DELETE' }),
       );
     });
 
-    it('listEpics calls GET /v1/projects/:id/epics', async () => {
+    it('listEpics calls GET /api/projects/:id/sessions', async () => {
       await client.listEpics('proj-1');
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/v1/projects/proj-1/epics'),
+        expect.stringContaining('/api/projects/proj-1/sessions'),
         expect.objectContaining({ method: 'GET' }),
       );
     });
 
-    it('listConnectors calls GET /v1/projects/:id/connectors', async () => {
+    it('listConnectors calls GET /api/projects/:id/mcp-connectors', async () => {
       await client.listConnectors('proj-1');
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/v1/projects/proj-1/connectors'),
+        expect.stringContaining('/api/projects/proj-1/mcp-connectors'),
         expect.objectContaining({ method: 'GET' }),
       );
     });
 
-    it('toggleConnector calls PATCH with enabled flag', async () => {
+    it('toggleConnector calls PATCH on toggle endpoint', async () => {
       globalThis.fetch = mockFetchResponse(200, { id: 'c1', enabled: true });
-      await client.toggleConnector('c1', true);
+      await client.toggleConnector('proj-1', 'c1');
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/v1/connectors/c1'),
+        expect.stringContaining('/api/projects/proj-1/mcp-connectors/c1/toggle'),
         expect.objectContaining({
           method: 'PATCH',
-          body: JSON.stringify({ enabled: true }),
         }),
       );
     });
@@ -334,20 +333,28 @@ describe('ApiClient', () => {
 
     // --- Dashboard ---
 
-    it('getDashboardStats calls GET /dashboard/stats', async () => {
-      globalThis.fetch = mockFetchResponse(200, { activeSessions: 2 });
+    it('getDashboardStats calls all 3 stats endpoints', async () => {
+      globalThis.fetch = mockFetchResponse(200, {});
       await client.getDashboardStats();
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/dashboard/stats'),
+        expect.stringContaining('/dashboard/stats/commits'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/dashboard/stats/agents'),
+        expect.objectContaining({ method: 'GET' }),
+      );
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/dashboard/stats/blockers'),
         expect.objectContaining({ method: 'GET' }),
       );
     });
 
     it('getDashboardStats with since includes query param', async () => {
-      globalThis.fetch = mockFetchResponse(200, { activeSessions: 1 });
+      globalThis.fetch = mockFetchResponse(200, {});
       await client.getDashboardStats('2024-01-01');
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/dashboard/stats?since=2024-01-01'),
+        expect.stringContaining('/dashboard/stats/commits?since=2024-01-01'),
         expect.objectContaining({ method: 'GET' }),
       );
     });

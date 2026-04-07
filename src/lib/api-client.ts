@@ -210,41 +210,41 @@ export class ApiClient {
   // --- Projects ---
 
   async listProjects(): Promise<Project[]> {
-    const data = await this.request<{ projects: Project[] } | Project[]>('/v1/projects');
+    const data = await this.request<{ projects: Project[] } | Project[]>('/api/projects');
     return Array.isArray(data) ? data : data.projects;
   }
 
   getProject(id: string): Promise<Project> {
-    return this.request<Project>(`/v1/projects/${encodeURIComponent(id)}`);
+    return this.request<Project>(`/api/projects/${encodeURIComponent(id)}`);
   }
 
   createProject(data: { name: string; repoUrl: string; description?: string }): Promise<Project> {
-    return this.request<Project>('/v1/projects', { method: 'POST', body: data });
+    return this.request<Project>('/api/projects', { method: 'POST', body: data });
   }
 
   importProject(repoUrl: string): Promise<Project> {
-    return this.request<Project>('/v1/projects/import', { method: 'POST', body: { repoUrl } });
+    return this.request<Project>('/api/projects/import', { method: 'POST', body: { repoUrl } });
   }
 
   deleteProject(id: string): Promise<void> {
-    return this.request<void>(`/v1/projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return this.request<void>(`/api/projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
   }
 
   // --- Epics ---
 
   async listEpics(projectId: string): Promise<Epic[]> {
-    const data = await this.request<{ epics: Epic[] } | Epic[]>(
-      `/v1/projects/${encodeURIComponent(projectId)}/epics`,
+    const data = await this.request<{ sessions: Epic[] } | Epic[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions`,
     );
-    return Array.isArray(data) ? data : data.epics;
+    return Array.isArray(data) ? data : data.sessions;
   }
 
   getEpic(epicId: string): Promise<Epic> {
-    return this.request<Epic>(`/v1/epics/${encodeURIComponent(epicId)}`);
+    return this.request<Epic>(`/api/epics/${encodeURIComponent(epicId)}`);
   }
 
   createEpic(projectId: string, data: { title: string; description?: string }): Promise<Epic> {
-    return this.request<Epic>(`/v1/projects/${encodeURIComponent(projectId)}/epics`, {
+    return this.request<Epic>(`/api/projects/${encodeURIComponent(projectId)}/sessions`, {
       method: 'POST',
       body: { name: data.title, requirement: data.description },
     });
@@ -253,18 +253,18 @@ export class ApiClient {
   // --- Sessions ---
 
   listSessions(epicId: string): Promise<Session[]> {
-    return this.request<Session[]>(`/v1/epics/${encodeURIComponent(epicId)}/sessions`);
+    return this.request<Session[]>(`/api/epics/${encodeURIComponent(epicId)}/sessions`);
   }
 
   getSession(sessionId: string): Promise<Session> {
-    return this.request<Session>(`/v1/sessions/${encodeURIComponent(sessionId)}`);
+    return this.request<Session>(`/api/sessions/${encodeURIComponent(sessionId)}`);
   }
 
   // --- MCP Connectors ---
 
   listConnectors(projectId: string): Promise<McpConnector[]> {
     return this.request<McpConnector[]>(
-      `/v1/projects/${encodeURIComponent(projectId)}/connectors`,
+      `/api/projects/${encodeURIComponent(projectId)}/mcp-connectors`,
     );
   }
 
@@ -273,7 +273,7 @@ export class ApiClient {
     data: { name: string; type: string; config: Record<string, unknown> },
   ): Promise<McpConnector> {
     return this.request<McpConnector>(
-      `/v1/projects/${encodeURIComponent(projectId)}/connectors`,
+      `/api/projects/${encodeURIComponent(projectId)}/mcp-connectors`,
       { method: 'POST', body: data },
     );
   }
@@ -284,31 +284,32 @@ export class ApiClient {
     data: Partial<{ name: string; type: string; config: Record<string, unknown>; enabled: boolean }>,
   ): Promise<McpConnector> {
     return this.request<McpConnector>(
-      `/v1/projects/${encodeURIComponent(projectId)}/connectors/${encodeURIComponent(connectorId)}`,
+      `/api/projects/${encodeURIComponent(projectId)}/mcp-connectors/${encodeURIComponent(connectorId)}`,
       { method: 'PUT', body: data },
     );
   }
 
   removeConnector(projectId: string, connectorId: string): Promise<void> {
     return this.request<void>(
-      `/v1/projects/${encodeURIComponent(projectId)}/connectors/${encodeURIComponent(connectorId)}`,
+      `/api/projects/${encodeURIComponent(projectId)}/mcp-connectors/${encodeURIComponent(connectorId)}`,
       { method: 'DELETE' },
     );
   }
 
-  toggleConnector(connectorId: string, enabled: boolean): Promise<McpConnector> {
+  toggleConnector(projectId: string, connectorId: string): Promise<McpConnector> {
     return this.request<McpConnector>(
-      `/v1/connectors/${encodeURIComponent(connectorId)}`,
-      { method: 'PATCH', body: { enabled } },
+      `/api/projects/${encodeURIComponent(projectId)}/mcp-connectors/${encodeURIComponent(connectorId)}/toggle`,
+      { method: 'PATCH' },
     );
   }
 
   // --- Stories ---
 
-  listStories(projectId: string, sessionId: string): Promise<Story[]> {
-    return this.request<Story[]>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories`,
+  async listStories(projectId: string, sessionId: string): Promise<Story[]> {
+    const data = await this.request<{ stories: Story[] } | Story[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories`,
     );
+    return Array.isArray(data) ? data : data.stories;
   }
 
   createStory(
@@ -317,7 +318,7 @@ export class ApiClient {
     data: { title: string; description?: string; complexity?: number },
   ): Promise<Story> {
     return this.request<Story>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories`,
       { method: 'POST', body: data },
     );
   }
@@ -329,7 +330,7 @@ export class ApiClient {
     data: Partial<{ title: string; description: string; complexity: number }>,
   ): Promise<Story> {
     return this.request<Story>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}`,
       { method: 'PUT', body: data },
     );
   }
@@ -341,42 +342,43 @@ export class ApiClient {
     status: string,
   ): Promise<Story> {
     return this.request<Story>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}/status`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}/status`,
       { method: 'PATCH', body: { status } },
     );
   }
 
   deleteStory(projectId: string, sessionId: string, storyId: string): Promise<void> {
     return this.request<void>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}`,
       { method: 'DELETE' },
     );
   }
 
   // --- Agents ---
 
-  listAgents(projectId: string, sessionId: string): Promise<Agent[]> {
-    return this.request<Agent[]>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents`,
+  async listAgents(projectId: string, sessionId: string): Promise<Agent[]> {
+    const data = await this.request<{ agents: Agent[] } | Agent[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents`,
     );
+    return Array.isArray(data) ? data : data.agents;
   }
 
   getAgent(projectId: string, sessionId: string, agentId: string): Promise<Agent> {
     return this.request<Agent>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(agentId)}`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(agentId)}`,
     );
   }
 
   getAgentLogs(projectId: string, sessionId: string, agentId: string): Promise<AgentLog[]> {
     return this.request<AgentLog[]>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(agentId)}/logs`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(agentId)}/logs`,
     );
   }
 
   // --- Messaging ---
 
   listMessages(projectId: string, sessionId: string, agentId?: string): Promise<Message[]> {
-    const base = `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`;
+    const base = `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`;
     const url = agentId ? `${base}?agentId=${encodeURIComponent(agentId)}` : base;
     return this.request<Message[]>(url);
   }
@@ -387,23 +389,24 @@ export class ApiClient {
     data: { content: string; agentId?: string },
   ): Promise<Message> {
     return this.request<Message>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`,
       { method: 'POST', body: data },
     );
   }
 
   getMessage(projectId: string, sessionId: string, messageId: string): Promise<Message> {
     return this.request<Message>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}`,
     );
   }
 
   // --- Escalations ---
 
-  listEscalations(projectId: string, sessionId: string): Promise<Escalation[]> {
-    return this.request<Escalation[]>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/escalations`,
+  async listEscalations(projectId: string, sessionId: string): Promise<Escalation[]> {
+    const data = await this.request<{ escalations: Escalation[] } | Escalation[]>(
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/escalations`,
     );
+    return Array.isArray(data) ? data : data.escalations;
   }
 
   resolveEscalation(
@@ -413,27 +416,38 @@ export class ApiClient {
     resolution: string,
   ): Promise<Escalation> {
     return this.request<Escalation>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/escalations/${encodeURIComponent(escalationId)}/resolve`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/escalations/${encodeURIComponent(escalationId)}/resolve`,
       { method: 'POST', body: { resolution } },
     );
   }
 
   // --- Dashboard ---
 
-  getDashboardStats(since?: string): Promise<DashboardStats> {
+  async getDashboardStats(since?: string): Promise<DashboardStats> {
     const query = since ? `?since=${encodeURIComponent(since)}` : '';
-    return this.request<DashboardStats>(`/v1/dashboard/stats${query}`);
+    const [commits, agents, blockers] = await Promise.all([
+      this.request<Record<string, unknown>>(`/api/dashboard/stats/commits${query}`),
+      this.request<Record<string, unknown>>(`/api/dashboard/stats/agents${query}`),
+      this.request<Record<string, unknown>>(`/api/dashboard/stats/blockers${query}`),
+    ]);
+    return {
+      storiesCompleted: (commits.storiesCompleted ?? commits.completed ?? 0) as number,
+      storiesTotal: (commits.storiesTotal ?? commits.total ?? 0) as number,
+      activeSessions: (agents.activeSessions ?? 0) as number,
+      totalAgents: (agents.totalAgents ?? 0) as number,
+      pendingEscalations: (blockers.pendingEscalations ?? 0) as number,
+    };
   }
 
   getSessionActivity(projectId: string, sessionId: string): Promise<ActivityEntry[]> {
     return this.request<ActivityEntry[]>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/activity`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/activity`,
     );
   }
 
   getSessionCosts(projectId: string, sessionId: string): Promise<SessionCosts> {
     return this.request<SessionCosts>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/costs`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/costs`,
     );
   }
 
@@ -441,7 +455,7 @@ export class ApiClient {
 
   pollSession(projectId: string, sessionId: string): Promise<SessionDetail> {
     return this.request<SessionDetail>(
-      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/poll`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/poll`,
     );
   }
 
@@ -452,7 +466,7 @@ export class ApiClient {
   ): Promise<{ data: SessionDetail | null; etag?: string }> {
     const baseUrl = await this.resolveBaseUrl();
     const token = await this.getToken();
-    const url = `${baseUrl}/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/poll`;
+    const url = `${baseUrl}/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/poll`;
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
