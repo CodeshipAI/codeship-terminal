@@ -307,7 +307,7 @@ export class ApiClient {
 
   listStories(projectId: string, sessionId: string): Promise<Story[]> {
     return this.request<Story[]>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories`,
     );
   }
 
@@ -317,7 +317,7 @@ export class ApiClient {
     data: { title: string; description?: string; complexity?: number },
   ): Promise<Story> {
     return this.request<Story>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories`,
       { method: 'POST', body: data },
     );
   }
@@ -329,7 +329,7 @@ export class ApiClient {
     data: Partial<{ title: string; description: string; complexity: number }>,
   ): Promise<Story> {
     return this.request<Story>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}`,
       { method: 'PUT', body: data },
     );
   }
@@ -341,14 +341,14 @@ export class ApiClient {
     status: string,
   ): Promise<Story> {
     return this.request<Story>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}/status`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}/status`,
       { method: 'PATCH', body: { status } },
     );
   }
 
   deleteStory(projectId: string, sessionId: string, storyId: string): Promise<void> {
     return this.request<void>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/stories/${encodeURIComponent(storyId)}`,
       { method: 'DELETE' },
     );
   }
@@ -357,26 +357,26 @@ export class ApiClient {
 
   listAgents(projectId: string, sessionId: string): Promise<Agent[]> {
     return this.request<Agent[]>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents`,
     );
   }
 
   getAgent(projectId: string, sessionId: string, agentId: string): Promise<Agent> {
     return this.request<Agent>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(agentId)}`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(agentId)}`,
     );
   }
 
   getAgentLogs(projectId: string, sessionId: string, agentId: string): Promise<AgentLog[]> {
     return this.request<AgentLog[]>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(agentId)}/logs`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(agentId)}/logs`,
     );
   }
 
   // --- Messaging ---
 
   listMessages(projectId: string, sessionId: string, agentId?: string): Promise<Message[]> {
-    const base = `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`;
+    const base = `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`;
     const url = agentId ? `${base}?agentId=${encodeURIComponent(agentId)}` : base;
     return this.request<Message[]>(url);
   }
@@ -387,14 +387,14 @@ export class ApiClient {
     data: { content: string; agentId?: string },
   ): Promise<Message> {
     return this.request<Message>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages`,
       { method: 'POST', body: data },
     );
   }
 
   getMessage(projectId: string, sessionId: string, messageId: string): Promise<Message> {
     return this.request<Message>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}`,
     );
   }
 
@@ -402,7 +402,7 @@ export class ApiClient {
 
   listEscalations(projectId: string, sessionId: string): Promise<Escalation[]> {
     return this.request<Escalation[]>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/escalations`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/escalations`,
     );
   }
 
@@ -413,7 +413,7 @@ export class ApiClient {
     resolution: string,
   ): Promise<Escalation> {
     return this.request<Escalation>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/escalations/${encodeURIComponent(escalationId)}/resolve`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/escalations/${encodeURIComponent(escalationId)}/resolve`,
       { method: 'POST', body: { resolution } },
     );
   }
@@ -422,18 +422,18 @@ export class ApiClient {
 
   getDashboardStats(since?: string): Promise<DashboardStats> {
     const query = since ? `?since=${encodeURIComponent(since)}` : '';
-    return this.request<DashboardStats>(`/api/dashboard/stats${query}`);
+    return this.request<DashboardStats>(`/v1/dashboard/stats${query}`);
   }
 
   getSessionActivity(projectId: string, sessionId: string): Promise<ActivityEntry[]> {
     return this.request<ActivityEntry[]>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/activity`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/activity`,
     );
   }
 
   getSessionCosts(projectId: string, sessionId: string): Promise<SessionCosts> {
     return this.request<SessionCosts>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/costs`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/costs`,
     );
   }
 
@@ -441,7 +441,7 @@ export class ApiClient {
 
   pollSession(projectId: string, sessionId: string): Promise<SessionDetail> {
     return this.request<SessionDetail>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/poll`,
+      `/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/poll`,
     );
   }
 
@@ -452,7 +452,7 @@ export class ApiClient {
   ): Promise<{ data: SessionDetail | null; etag?: string }> {
     const baseUrl = await this.resolveBaseUrl();
     const token = await this.getToken();
-    const url = `${baseUrl}/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/poll`;
+    const url = `${baseUrl}/v1/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/poll`;
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
