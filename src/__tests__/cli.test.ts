@@ -73,4 +73,11 @@ describe('ship CLI', () => {
     expect(output).toContain('list');
     expect(output).toContain('view');
   });
+
+  it('shows agent subcommands', () => {
+    const output = run('agent', '--help');
+    expect(output).toContain('list');
+    expect(output).toContain('view');
+    expect(output).toContain('logs');
+  });
 });
