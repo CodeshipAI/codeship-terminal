@@ -4,7 +4,7 @@ import { getToken, setToken, clearToken, isAuthenticated } from '../lib/auth-sto
 vi.mock('../lib/config.js', () => {
   let store: Record<string, unknown> = {};
   return {
-    loadConfig: vi.fn(() => ({ apiUrl: 'https://api.codeship.ai', ...store })),
+    loadConfig: vi.fn(() => ({ apiUrl: 'https://api.codeship.tech', ...store })),
     saveConfig: vi.fn((config: Record<string, unknown>) => {
       store = { ...config };
     }),

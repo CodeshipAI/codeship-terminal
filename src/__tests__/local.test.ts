@@ -40,7 +40,7 @@ describe('local command', () => {
     await setConfigValue('api-url', 'http://localhost:3000');
     await resetConfig();
     const config = await loadConfig();
-    expect(config.apiUrl).toBe('https://api.codeship.ai');
+    expect(config.apiUrl).toBe('https://api.codeship.tech');
   });
 
   it('supports custom port for local start', async () => {
@@ -52,7 +52,7 @@ describe('local command', () => {
 
   it('detects local URL correctly', () => {
     const localUrls = ['http://localhost:3000', 'http://localhost:8080', 'http://127.0.0.1:3000'];
-    const productionUrls = ['https://api.codeship.ai', 'https://example.com'];
+    const productionUrls = ['https://api.codeship.tech', 'https://example.com'];
 
     function isLocalUrl(url: string): boolean {
       return url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
