@@ -163,6 +163,8 @@ export class ApiClient {
   }
 
   private async getToken(): Promise<string | undefined> {
+    const envToken = process.env.CODESHIP_TOKEN;
+    if (envToken) return envToken;
     const config = await loadConfig();
     return config.token;
   }

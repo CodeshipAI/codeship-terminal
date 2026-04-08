@@ -6,7 +6,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { initiateCliAuth, waitForAuth } from '../lib/oauth.js';
-import { setToken, clearToken, isAuthenticated, getToken } from '../lib/auth-store.js';
+import { setToken, clearToken, isAuthenticated, getToken, getTokenSource, getEnvToken } from '../lib/auth-store.js';
 
 async function installClaudeSkill(): Promise<boolean> {
   const skillDir = path.join(os.homedir(), '.claude', 'skills', 'codeship');
@@ -97,6 +97,12 @@ authCommand
   .description('Log in to Codeship via OAuth browser flow')
   .option('--no-browser', 'Print the URL instead of opening the browser')
   .action(async (options) => {
+    if (getEnvToken()) {
+      console.log(chalk.yellow('CODESHIP_TOKEN environment variable is set. OAuth login is not needed.'));
+      console.log(chalk.dim('  Unset the env var to use OAuth login instead: unset CODESHIP_TOKEN'));
+      return;
+    }
+
     const alreadyLoggedIn = await isAuthenticated();
     if (alreadyLoggedIn) {
       console.log(chalk.yellow('Already logged in. Run "ship auth logout" first to re-authenticate.'));
@@ -155,26 +161,31 @@ authCommand
   .command('logout')
   .description('Log out and clear stored credentials')
   .action(async () => {
-    const loggedIn = await isAuthenticated();
-    if (!loggedIn) {
-      console.log(chalk.yellow('Not currently logged in.'));
-      return;
+    if (getEnvToken()) {
+      console.log(chalk.yellow('CODESHIP_TOKEN environment variable is set.'));
+      console.log(chalk.dim('  Logout cannot clear the env var. Run: unset CODESHIP_TOKEN'));
     }
 
-    await clearToken();
-    console.log(chalk.green('Logged out successfully.'));
+    const source = await getTokenSource();
+    if (source === 'config') {
+      await clearToken();
+      console.log(chalk.green('Logged out successfully (config file token cleared).'));
+    } else if (source === 'none') {
+      console.log(chalk.yellow('Not currently logged in.'));
+    }
   });
 
 authCommand
   .command('status')
   .description('Show current authentication status')
   .action(async () => {
-    const loggedIn = await isAuthenticated();
-    if (loggedIn) {
+    const source = await getTokenSource();
+    if (source !== 'none') {
       const token = await getToken();
       const masked = token ? `${token.slice(0, 8)}...${token.slice(-4)}` : '';
       console.log(chalk.green('Authenticated'));
       console.log(`  Token: ${masked}`);
+      console.log(`  Source: ${source === 'env' ? 'CODESHIP_TOKEN env var' : 'config file'}`);
     } else {
       console.log(chalk.yellow('Not authenticated. Run "ship auth login" to log in.'));
     }

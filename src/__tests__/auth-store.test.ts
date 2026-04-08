@@ -1,19 +1,32 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getToken, setToken, clearToken, isAuthenticated } from '../lib/auth-store.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { getToken, setToken, clearToken, isAuthenticated, getTokenSource, getEnvToken } from '../lib/auth-store.js';
+
+let mockStore: Record<string, unknown> = {};
 
 vi.mock('../lib/config.js', () => {
-  let store: Record<string, unknown> = {};
   return {
-    loadConfig: vi.fn(() => ({ apiUrl: 'https://api.codeship.tech', ...store })),
+    loadConfig: vi.fn(() => ({ apiUrl: 'https://api.codeship.ai', ...mockStore })),
     saveConfig: vi.fn((config: Record<string, unknown>) => {
-      store = { ...config };
+      mockStore = { ...config };
     }),
   };
 });
 
 describe('auth-store', () => {
+  const originalEnv = process.env.CODESHIP_TOKEN;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockStore = {};
+    delete process.env.CODESHIP_TOKEN;
+  });
+
+  afterEach(() => {
+    if (originalEnv !== undefined) {
+      process.env.CODESHIP_TOKEN = originalEnv;
+    } else {
+      delete process.env.CODESHIP_TOKEN;
+    }
   });
 
   it('returns undefined when no token is stored', async () => {
@@ -30,10 +43,62 @@ describe('auth-store', () => {
 
   it('reports authenticated after setting token', async () => {
     await setToken('a-token');
-    // isAuthenticated calls loadConfig which returns the mocked store
-    // Since we set the token through saveConfig mock, we need the mock to reflect it
     const { loadConfig } = await import('../lib/config.js');
     const config = await loadConfig();
     expect(!!config.token).toBe(true);
+  });
+
+  describe('CODESHIP_TOKEN env var', () => {
+    it('returns env var token when CODESHIP_TOKEN is set', async () => {
+      process.env.CODESHIP_TOKEN = 'cs_env_token_123';
+      const token = await getToken();
+      expect(token).toBe('cs_env_token_123');
+    });
+
+    it('env var token takes priority over config file token', async () => {
+      await setToken('config-token');
+      process.env.CODESHIP_TOKEN = 'cs_env_token_456';
+      const token = await getToken();
+      expect(token).toBe('cs_env_token_456');
+    });
+
+    it('falls back to config token when env var is not set', async () => {
+      await setToken('config-token');
+      const token = await getToken();
+      expect(token).toBe('config-token');
+    });
+
+    it('isAuthenticated returns true when env var is set', async () => {
+      process.env.CODESHIP_TOKEN = 'cs_env_token';
+      expect(await isAuthenticated()).toBe(true);
+    });
+
+    it('getTokenSource returns env when CODESHIP_TOKEN is set', async () => {
+      process.env.CODESHIP_TOKEN = 'cs_env_token';
+      expect(await getTokenSource()).toBe('env');
+    });
+
+    it('getTokenSource returns config when only config token exists', async () => {
+      await setToken('config-token');
+      expect(await getTokenSource()).toBe('config');
+    });
+
+    it('getTokenSource returns none when no token exists', async () => {
+      expect(await getTokenSource()).toBe('none');
+    });
+
+    it('getEnvToken returns the env var value', () => {
+      process.env.CODESHIP_TOKEN = 'cs_test';
+      expect(getEnvToken()).toBe('cs_test');
+    });
+
+    it('getEnvToken returns undefined when env var is not set', () => {
+      expect(getEnvToken()).toBeUndefined();
+    });
+
+    it('getEnvToken returns undefined for empty string', () => {
+      process.env.CODESHIP_TOKEN = '';
+      expect(getEnvToken()).toBeUndefined();
+    });
   });
 });
