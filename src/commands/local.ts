@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { loadConfig, setConfigValue, resetConfig } from '../lib/config.js';
 
 const DEFAULT_LOCAL_PORT = 3000;
-const PRODUCTION_API_URL = 'https://api.codeship.ai';
+const PRODUCTION_API_URL = 'https://api.codeship.tech';
 
 function isLocalUrl(url: string): boolean {
   return url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');

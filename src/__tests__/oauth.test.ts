@@ -32,11 +32,11 @@ describe('buildAuthorizationUrl', () => {
       redirectUri: 'http://127.0.0.1:9876/callback',
       codeChallenge: 'test-challenge',
       state: 'test-state',
-      apiUrl: 'https://api.codeship.ai',
+      apiUrl: 'https://api.codeship.tech',
     });
 
     const parsed = new URL(url);
-    expect(parsed.origin).toBe('https://api.codeship.ai');
+    expect(parsed.origin).toBe('https://api.codeship.tech');
     expect(parsed.pathname).toBe('/oauth/authorize');
     expect(parsed.searchParams.get('response_type')).toBe('code');
     expect(parsed.searchParams.get('client_id')).toBe('codeship-cli');

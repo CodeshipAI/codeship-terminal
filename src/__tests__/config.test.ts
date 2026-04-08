@@ -20,7 +20,7 @@ describe('config', () => {
   it('should have correct default API URL', async () => {
     const { loadConfig } = await import('../lib/config.js');
     const config = await loadConfig();
-    expect(config.apiUrl).toBe('https://api.codeship.ai');
+    expect(config.apiUrl).toBe('https://api.codeship.tech');
   });
 
   it('should return default config when file does not exist', async () => {
